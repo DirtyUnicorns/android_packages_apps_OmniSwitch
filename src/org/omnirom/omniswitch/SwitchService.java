@@ -34,6 +34,16 @@ public class SwitchService extends Service {
     private final static String TAG = "SwitchService";
     private static boolean DEBUG = false;
 
+    /**
+     * Intent broadcast action for omniswitch service started
+     */
+    private static final String ACTION_SERVICE_START = "org.omnirom.omniswitch.ACTION_SERVICE_START";
+
+    /**
+     * Intent broadcast action for omniswitch service stopped
+     */
+    private static final String ACTION_SERVICE_STOP = "org.omnirom.omniswitch.ACTION_SERVICE_STOP";
+
     private SwitchGestureView mGesturePanel;
     private RecentsReceiver mReceiver;
     private SwitchManager mManager;
@@ -65,6 +75,7 @@ public class SwitchService extends Service {
         filter.addAction(RecentsReceiver.ACTION_KILL_ACTIVITY);
         filter.addAction(RecentsReceiver.ACTION_OVERLAY_SHOWN);
         filter.addAction(RecentsReceiver.ACTION_OVERLAY_HIDDEN);
+        filter.addAction(RecentsReceiver.ACTION_TOGGLE_OVERLAY);
 
         registerReceiver(mReceiver, filter);
 
@@ -83,6 +94,9 @@ public class SwitchService extends Service {
         mGesturePanel.show();
 
         mIsRunning = true;
+
+        Intent startActivity = new Intent(ACTION_SERVICE_START);
+        sendBroadcast(startActivity);
     }
 
     @Override
@@ -98,6 +112,9 @@ public class SwitchService extends Service {
         mPrefs.unregisterOnSharedPreferenceChangeListener(mPrefsListener);
 
         mIsRunning = false;
+
+        Intent stopActivity = new Intent(ACTION_SERVICE_STOP);
+        sendBroadcast(stopActivity);
     }
 
     @Override
@@ -118,6 +135,7 @@ public class SwitchService extends Service {
         public static final String ACTION_KILL_ACTIVITY = "org.omnirom.omniswitch.ACTION_KILL_ACTIVITY";
         public static final String ACTION_OVERLAY_SHOWN = "org.omnirom.omniswitch.ACTION_OVERLAY_SHOWN";
         public static final String ACTION_OVERLAY_HIDDEN = "org.omnirom.omniswitch.ACTION_OVERLAY_HIDDEN";
+        public static final String ACTION_TOGGLE_OVERLAY = "org.omnirom.omniswitch.ACTION_TOGGLE_OVERLAY";
 
         @Override
         public void onReceive(final Context context, Intent intent) {
@@ -131,7 +149,6 @@ public class SwitchService extends Service {
                             MainActivity.class);
                     mainActivity.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                             | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-
                     startActivity(mainActivity);
                 }
             } else if (ACTION_SHOW_OVERLAY2.equals(action)) {
@@ -155,6 +172,19 @@ public class SwitchService extends Service {
                 mGesturePanel.overlayShown();
             } else if (ACTION_OVERLAY_HIDDEN.equals(action)){
                 mGesturePanel.overlayHidden();
+            } else if (ACTION_TOGGLE_OVERLAY.equals(action)) {
+                if (mManager.isShowing()) {
+                    Intent finishActivity = new Intent(
+                            MainActivity.ActivityReceiver.ACTION_FINISH);
+                    sendBroadcast(finishActivity);
+                    mManager.hide();
+                } else {
+                    Intent mainActivity = new Intent(context,
+                            MainActivity.class);
+                    mainActivity.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                    startActivity(mainActivity);
+                }
             }
         }
     }
@@ -165,7 +195,7 @@ public class SwitchService extends Service {
         mManager.updatePrefs(prefs, key);
         mGesturePanel.updatePrefs(prefs, key);
     }
-    
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
