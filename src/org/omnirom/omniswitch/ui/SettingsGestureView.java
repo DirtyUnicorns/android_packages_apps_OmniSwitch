@@ -20,10 +20,12 @@ package org.omnirom.omniswitch.ui;
 import org.omnirom.omniswitch.R;
 import org.omnirom.omniswitch.SettingsActivity;
 import org.omnirom.omniswitch.SwitchConfiguration;
-import org.omnirom.omniswitch.Utils;
+import org.omnirom.omniswitch.SwitchService;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.graphics.PorterDuff.Mode;
@@ -31,6 +33,7 @@ import android.graphics.drawable.Drawable;
 import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -59,6 +62,8 @@ public class SettingsGestureView {
     private boolean mShowing;
     private float mDensity;
     private int mStartY;
+    private int mStartYRelative;
+    private int mHandleHeight;
     private int mEndY;
     private int mColor;
     private Drawable mDragHandle;
@@ -226,12 +231,12 @@ public class SettingsGestureView {
 
                 switch (action) {
                 case MotionEvent.ACTION_DOWN:
-                    mPrefs.edit().putInt(SettingsActivity.PREF_DRAG_HANDLE_LOCATION, mLocation).commit();
-                    
+                    Editor edit = mPrefs.edit();
+                    edit.putInt(SettingsActivity.PREF_DRAG_HANDLE_LOCATION, mLocation);
                     int relHeight = (int)(mStartY / (getCurrentDisplayHeight() /100));
-                    mPrefs.edit().putInt(SettingsActivity.PREF_HANDLE_POS_START_RELATIVE, relHeight).commit();
-                    mPrefs.edit().putInt(SettingsActivity.PREF_HANDLE_HEIGHT, mEndY - mStartY).commit();
-
+                    edit.putInt(SettingsActivity.PREF_HANDLE_POS_START_RELATIVE, relHeight);
+                    edit.putInt(SettingsActivity.PREF_HANDLE_HEIGHT, mEndY - mStartY);
+                    edit.commit();
                     hide();
                 }
                 return true;
@@ -283,13 +288,25 @@ public class SettingsGestureView {
                 return true;
             }
         });
+        
+        mView.setFocusableInTouchMode(true);
+        mView.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if(event.getAction()==KeyEvent.ACTION_DOWN){
+                    hide();
+                    return true;
+                }
+                return false;
+            }
+        });
     }
 
     public WindowManager.LayoutParams getGesturePanelLayoutParams() {
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+                WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_DIM_BEHIND,
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.CENTER;
@@ -334,6 +351,9 @@ public class SettingsGestureView {
                 mDragHandleLimiterHeight);
         params.gravity = mLocation == 1 ? Gravity.LEFT : Gravity.RIGHT;
         mDragButtonEnd.setLayoutParams(params);
+        
+        mStartYRelative = (int)(mStartY / (getCurrentDisplayHeight() /100));
+        mHandleHeight = mEndY - mStartY;
     }
     
     private void updateDragHandleImage() {
@@ -342,13 +362,13 @@ public class SettingsGestureView {
         Drawable d2 = mDragHandleEnd;
 
         if (mLocation == 1) {
-            d = Utils.rotate(mContext.getResources(), d, 180);
-            d1 = Utils.rotate(mContext.getResources(), mDragHandleEnd, 180);
-            d2 = Utils.rotate(mContext.getResources(), mDragHandleStart, 180);
+            d = BitmapUtils.rotate(mContext.getResources(), d, 180);
+            d1 = BitmapUtils.rotate(mContext.getResources(), mDragHandleEnd, 180);
+            d2 = BitmapUtils.rotate(mContext.getResources(), mDragHandleStart, 180);
         }
 
         mDragButton.setScaleType(ImageView.ScaleType.FIT_XY);
-        mDragButton.setImageDrawable(d);
+        mDragButton.setImageDrawable(BitmapUtils.colorize(mContext.getResources(), mColor, d));
         mDragButton.getDrawable().setColorFilter(mColor, Mode.SRC_ATOP);
         
         mDragButtonStart.setScaleType(ImageView.ScaleType.FIT_XY);
@@ -384,6 +404,10 @@ public class SettingsGestureView {
 
         mWindowManager.addView(mView, getGesturePanelLayoutParams());
         mShowing = true;
+
+        Intent intent = new Intent(
+                SwitchService.RecentsReceiver.ACTION_HANDLE_HIDE);
+        mContext.sendBroadcast(intent);
     }
 
     public void hide() {
@@ -393,19 +417,33 @@ public class SettingsGestureView {
 
         mWindowManager.removeView(mView);
         mShowing = false;
+
+        Intent intent = new Intent(
+                SwitchService.RecentsReceiver.ACTION_HANDLE_SHOW);
+        mContext.sendBroadcast(intent);
     }
     
-    private void resetPosition() {
+    public void resetPosition() {
         mStartY = SwitchConfiguration.getInstance(mContext).getDefaultOffsetStart();
         mEndY = SwitchConfiguration.getInstance(mContext).getDefaultOffsetEnd();
         updateLayout();
     }
     
     // includes rotation                
-    public int getCurrentDisplayHeight(){
+    private int getCurrentDisplayHeight(){
         DisplayMetrics dm = new DisplayMetrics();
         mWindowManager.getDefaultDisplay().getMetrics(dm);
         int height = dm.heightPixels;
         return height;
+    }
+    
+    public boolean isShowing() {
+        return mShowing;
+    }
+    
+    public void handleRotation(){
+        mStartY = SwitchConfiguration.getInstance(mContext).getCustomOffsetStart(mStartYRelative);
+        mEndY = SwitchConfiguration.getInstance(mContext).getCustomOffsetEnd(mStartYRelative, mHandleHeight);
+        updateLayout();
     }
 }

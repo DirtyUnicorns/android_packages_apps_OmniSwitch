@@ -1003,7 +1003,7 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
 
     /** Scroll to the provided offset */
     public void scrollTo(int x) {
-        mFlingTracker.startScroll(mNextX, 0, x - mNextX, 0);
+        mFlingTracker.startScroll(mNextX, 0, x - mNextX, 0, 0);
         setCurrentScrollState(OnScrollStateChangedListener.ScrollState.SCROLL_STATE_FLING);
         requestLayout();
     }
@@ -1223,6 +1223,7 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
                     return true;
                 }
             }
+            unpressTouchedChild();
             return HorizontalListView.this
                     .onFling(e1, e2, velocityX, velocityY);
         }
@@ -1289,21 +1290,23 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
 
         @Override
         public void onLongPress(MotionEvent e) {
-            unpressTouchedChild();
+            OnItemLongClickListener onItemLongClickListener = getOnItemLongClickListener();
+            if (onItemLongClickListener != null) {
+                unpressTouchedChild();
 
-            final int index = getChildIndex((int) e.getX(), (int) e.getY());
-            if (index >= 0 && !mBlockTouchAction) {
-                View child = getChildAt(index);
-                OnItemLongClickListener onItemLongClickListener = getOnItemLongClickListener();
-                if (onItemLongClickListener != null) {
-                    int adapterIndex = mLeftViewAdapterIndex + index;
-                    boolean handled = onItemLongClickListener.onItemLongClick(
-                            HorizontalListView.this, child, adapterIndex,
-                            mAdapter.getItemId(adapterIndex));
+                final int index = getChildIndex((int) e.getX(), (int) e.getY());
+                if (index >= 0 && !mBlockTouchAction) {
+                    View child = getChildAt(index);
+                    if (onItemLongClickListener != null) {
+                        int adapterIndex = mLeftViewAdapterIndex + index;
+                        boolean handled = onItemLongClickListener.onItemLongClick(
+                                HorizontalListView.this, child, adapterIndex,
+                                mAdapter.getItemId(adapterIndex));
 
-                    if (handled) {
-                        // BZZZTT!!1!
-                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        if (handled) {
+                            // BZZZTT!!1!
+                            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        }
                     }
                 }
             }
@@ -1329,6 +1332,10 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
 
             // Allow the user to interact with parent views
             requestParentListViewToNotInterceptTouchEvents(false);
+
+            if(mSelectionListener!=null && mViewBeingTouched!=null){
+                mSelectionListener.onItemSelected(mViewBeingTouched, false);
+            }
 
             releaseEdgeGlow();
         } else if (event.getAction() == MotionEvent.ACTION_CANCEL) {

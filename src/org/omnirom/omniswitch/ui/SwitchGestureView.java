@@ -18,9 +18,10 @@
 package org.omnirom.omniswitch.ui;
 
 import org.omnirom.omniswitch.R;
+import org.omnirom.omniswitch.RecentTasksLoader;
+import org.omnirom.omniswitch.SettingsActivity;
 import org.omnirom.omniswitch.SwitchConfiguration;
 import org.omnirom.omniswitch.SwitchService;
-import org.omnirom.omniswitch.Utils;
 import org.omnirom.omniswitch.showcase.ShowcaseView;
 import org.omnirom.omniswitch.showcase.ShowcaseView.OnShowcaseEventListener;
 
@@ -29,7 +30,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
-import android.graphics.PorterDuff.Mode;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -108,7 +108,7 @@ public class SwitchGestureView implements OnShowcaseEventListener {
                     Log.d(TAG, "button onTouch");
                 }
                 if (!mEnabled){
-                    return true;
+                    return false;
                 }
                 boolean defaultResult = v.onTouchEvent(event);
 
@@ -126,6 +126,10 @@ public class SwitchGestureView implements OnShowcaseEventListener {
                         mDownPoint[1] = event.getY();
                         mSwipeStarted = true;
                         mShowStarted = false;
+
+                        RecentTasksLoader.getInstance(mContext).cancelPreloadingTasks();
+                        RecentTasksLoader.getInstance(mContext).preloadTasks();
+
                         if(DEBUG){
                             Log.d(TAG, "button down " + mDownPoint[0] + " "
                                     + mDownPoint[1]);
@@ -211,7 +215,7 @@ public class SwitchGestureView implements OnShowcaseEventListener {
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+                WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
@@ -255,10 +259,10 @@ public class SwitchGestureView implements OnShowcaseEventListener {
         }
         
         if (mConfiguration.mLocation == 1) {
-            mCurrentDragHandleImage = Utils.rotate(mContext.getResources(), mCurrentDragHandleImage, 180);
+            mCurrentDragHandleImage = BitmapUtils.rotate(mContext.getResources(), mCurrentDragHandleImage, 180);
         }
-        mCurrentDragHandleImage.setColorFilter(mConfiguration.mDragHandleColor, Mode.SRC_ATOP);
-
+        mCurrentDragHandleImage=BitmapUtils.colorize(mContext.getResources(), mConfiguration.mDragHandleColor, mCurrentDragHandleImage);
+        mCurrentDragHandleImage.setAlpha((int) (255 * mConfiguration.mDragHandleOpacity));
         mDragButton.setScaleType(ImageView.ScaleType.FIT_XY);
 
         if(shown){
@@ -273,13 +277,23 @@ public class SwitchGestureView implements OnShowcaseEventListener {
             Log.d(TAG, "updatePrefs");
         }
         updateButton();
+        
+        if(key == null || key.equals(SettingsActivity.PREF_DRAG_HANDLE_ENABLE)){
+            if(mConfiguration.mDragHandleShow){
+                show();
+            } else {
+                hide();
+            }
+        }
     }
 
     public synchronized void show() {
         if (mShowing) {
             return;
         }
-
+        if(DEBUG){
+            Log.d(TAG, "show");
+        }
         mWindowManager.addView(mView, getParams());
         if(!mShowcaseDone){
             mView.postDelayed(new Runnable(){
@@ -297,11 +311,14 @@ public class SwitchGestureView implements OnShowcaseEventListener {
             return;
         }
 
+        if(DEBUG){
+            Log.d(TAG, "hide");
+        }
         mWindowManager.removeView(mView);
         mShowing = false;
         mEnabled = false;
     }
-    
+
     public void overlayShown() {
         if(DEBUG){
             Log.d(TAG, "overlayShown");

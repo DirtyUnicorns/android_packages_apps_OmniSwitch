@@ -25,7 +25,8 @@ import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
 public class SwitchConfiguration {
-    public float mBackgroundOpacity = 0.8f;
+    public float mBackgroundOpacity = 0.5f;
+    public boolean mDimBehind;
     public int mLocation = 0; // 0 = right 1 = left
     public boolean mAnimate = true;
     public int mIconSize = 60; // in dip
@@ -38,16 +39,19 @@ public class SwitchConfiguration {
     public int mHandleHeight;
     public boolean mShowLabels = true;
     public int mDragHandleColor;
+    public float mDragHandleOpacity;
     public int mGlowColor;
     public int mDefaultColor;
     public int mIconDpi;
     public boolean mAutoHide;
-    public int mHorizontalMargin;
     public static final int AUTO_HIDE_DEFAULT = 3000; // 3s
+    public boolean mDragHandleShow = true;
+    public int mGravity;
 
     public static SwitchConfiguration mInstance;
     private WindowManager mWindowManager;
     private int mDefaultHeight;
+    private int mHorizontalMargin;
 
     public static SwitchConfiguration getInstance(Context context) {
         if(mInstance==null){
@@ -65,7 +69,7 @@ public class SwitchConfiguration {
         Point size = new Point();
         mWindowManager.getDefaultDisplay().getSize(size);
         mDefaultColor = context.getResources().getColor(R.color.holo_blue_light);
-        mGlowColor = mDefaultColor;
+        mGlowColor = context.getResources().getColor(R.color.glow_color);
         mDefaultHeight = (int) (100 * mDensity + 0.5);
         mHorizontalMargin = (int) (5 * mDensity + 0.5);
         updatePrefs(PreferenceManager.getDefaultSharedPreferences(context), "");
@@ -74,7 +78,7 @@ public class SwitchConfiguration {
     public void updatePrefs(SharedPreferences prefs, String key) {
         mLocation = prefs.getInt(
                 SettingsActivity.PREF_DRAG_HANDLE_LOCATION, 0);
-        int opacity = prefs.getInt(SettingsActivity.PREF_OPACITY, 80);
+        int opacity = prefs.getInt(SettingsActivity.PREF_OPACITY, 50);
         mBackgroundOpacity = (float) opacity / 100.0f;
         mAnimate = prefs.getBoolean(SettingsActivity.PREF_ANIMATE, true);
         String iconSize = prefs
@@ -94,36 +98,50 @@ public class SwitchConfiguration {
                 * mDensity + 0.5f);
         mDragHandleColor = prefs
                 .getInt(SettingsActivity.PREF_DRAG_HANDLE_COLOR, mDefaultColor);
-        mAutoHide= prefs.getBoolean(SettingsActivity.PREF_AUDIO_HIDE_HANDLE, false);
+        opacity = prefs.getInt(SettingsActivity.PREF_DRAG_HANDLE_OPACITY, 100);
+        mDragHandleOpacity = (float) opacity / 100.0f;
+        mAutoHide= prefs.getBoolean(SettingsActivity.PREF_AUTO_HIDE_HANDLE, false);
+        mDragHandleShow = prefs.getBoolean(SettingsActivity.PREF_DRAG_HANDLE_ENABLE, true);
+        mDimBehind = prefs.getBoolean(SettingsActivity.PREF_DIM_BEHIND, false);
+        String gravity = prefs.getString(SettingsActivity.PREF_GRAVITY, "0");
+        mGravity = Integer.valueOf(gravity);
     }
     
     // includes rotation                
-    public int getCurrentDisplayHeight(){
+    private int getCurrentDisplayHeight(){
         DisplayMetrics dm = new DisplayMetrics();
         mWindowManager.getDefaultDisplay().getMetrics(dm);
         int height = dm.heightPixels;
         return height;
     }
     
-    public int getCurrentDisplayWidth(){
+    private int getCurrentDisplayWidth(){
         DisplayMetrics dm = new DisplayMetrics();
         mWindowManager.getDefaultDisplay().getMetrics(dm);
         int width = dm.widthPixels;
         return width;
     }
 
+    public boolean isLandscape() {
+        return getCurrentDisplayWidth() > getCurrentDisplayHeight();
+    }
+
     public int getCurrentOverlayWidth() {
-        if (getCurrentDisplayWidth() > getCurrentDisplayHeight()){
+        if (isLandscape()){
             // landscape
             return Math.max((int)(getCurrentDisplayWidth() * 0.66f), getCurrentDisplayHeight());
         }
-        return getCurrentDisplayWidth();
+        return getCurrentDisplayWidth() - mHorizontalMargin;
     }
     
     public int getCurrentOffsetStart(){
         return (getCurrentDisplayHeight() / 100) * mStartYRelative;
     }
 
+    public int getCustomOffsetStart(int startYRelative){
+        return (getCurrentDisplayHeight() / 100) * startYRelative;
+    }
+    
     public int getDefaultOffsetStart(){
         return ((getCurrentDisplayHeight() / 2) - mDefaultHeight /2);
     }
@@ -134,6 +152,10 @@ public class SwitchConfiguration {
 
     public int getCurrentOffsetEnd(){
         return getCurrentOffsetStart() + mHandleHeight;
+    }
+
+    public int getCustomOffsetEnd(int startYRelative, int handleHeight){
+        return getCustomOffsetStart(startYRelative) + handleHeight;
     }
     
     public int getDefaultOffsetEnd(){
