@@ -82,7 +82,7 @@
   <string name="no_iconpacks_summary">Nessun pacchetto di icone installato</string>
   <string name="icon_pack_title">Pacchetto icone</string>
   <string name="icon_pack_summary">Utilizza il pacchetto icone per le icone delle app</string>
-  <string name="category_speed_switcher_title">Quick Switcher</string>
+  <string name="category_speed_switcher_title">Interruttore Rapido</string>
   <string name="speed_switcher_enable_summary">Premi a lungo la zona di apertura per attivare</string>
   <string name="speed_switcher_enable_title">Attiva</string>
   <string name="back">Indietro</string>
@@ -144,7 +144,7 @@
   <string name="package_bottom_task_title">In basso</string>
   <string name="package_right_task_title">Destra</string>
   <string name="package_full_task_title">A schermo intero</string>
-  <string name="shortcut_label_toggle_overlay">Toggle overlay</string>
+  <string name="shortcut_label_toggle_overlay">Toggle sovrapposizione</string>
   <string name="adjust_handle_title_new">Configura zona di trascinamento</string>
   <string name="adjust_handle_summary">Configura la posizione di dimensione e colore</string>
   <string name="settings_button_text">Impostazioni</string>

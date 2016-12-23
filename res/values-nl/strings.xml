@@ -41,7 +41,7 @@
   <string name="show_rambar_summary">Hoeveelheid vrij- en gebruikt geheugen weergeven</string>
   <string name="show_app_labels">Toon app naam</string>
   <string name="show_app_labels_summary">Applicatie naam wordt getoond met het icoon</string>
-  <string name="category_overlay_title">Overlay</string>
+  <string name="category_overlay_title">Overlap</string>
   <string name="category_drag_handle_title">Sleep handle</string>
   <string name="category_favorite_title">Favorieten</string>
   <string name="favorite_apps_config_title">Favorieten beheren</string>
@@ -144,7 +144,7 @@
   <string name="package_bottom_task_title">Onderaan</string>
   <string name="package_right_task_title">Rechts</string>
   <string name="package_full_task_title">Volledige grootte</string>
-  <string name="shortcut_label_toggle_overlay">Toggle overlay</string>
+  <string name="shortcut_label_toggle_overlay">Toggle overlap</string>
   <string name="adjust_handle_title_new">Configureren van sleep handle</string>
   <string name="adjust_handle_summary">Configureren van positie grootte en kleur</string>
   <string name="settings_button_text">Instellingen</string>
